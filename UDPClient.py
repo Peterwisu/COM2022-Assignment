@@ -95,7 +95,8 @@ def receive_broadcast(server):
         while True:
             # record a time before send data to server
             initial_time = time.time()
-            client_socket.sendto(b'RTT::',(host_ip, port))
+            msg = f"RTT::{name}"
+            client_socket.sendto(bytes(msg,'ascii'),(host_ip, port))
             # receive a packet containing data for vdo streaming
             packet, server_add = client_socket.recvfrom(BUFF_SIZE)
             # record a time after data to server
@@ -152,6 +153,7 @@ def user_login():
     
     try:
         # let clietn input theirs username
+        global name
         name =  str(input('input your name : type quit to exit\n'))
         
         # let client input theirs password

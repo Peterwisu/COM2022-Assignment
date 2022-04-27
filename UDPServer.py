@@ -12,7 +12,6 @@ This is a Server UDP file
 """
     IMPORT ALL IMPORTANT LIBRARIES
 """
-from http import client
 import numpy as np
 import imutils
 import socket
@@ -20,6 +19,7 @@ import time
 import base64
 import threading
 import cv2
+import os.path
 
 """
     IMPORTANT  for mac user type command 'sudo sysctl -w net.inet.udp.maxdgram=65535' to max buffer size for UDP
@@ -29,6 +29,7 @@ BUFF_SIZE = 65536
 
 # Set Empty list for list client connected
 client_list = []
+
 
 
 # Dictionary of authourize client and password 
@@ -52,6 +53,7 @@ class Client:
     def __init__(self, name, address):
         self.name = name
         self.address = address
+      
 
     # get ip of client
     def get_IP(self):
@@ -60,6 +62,15 @@ class Client:
     # get port of client
     def get_Port(self):
         return self.address[1]
+    
+    def reset_time(self):
+        self.time = 1
+        
+    def increment_time(self):
+        self.time+=1
+        
+    def get_time(self):
+        return self.time
 
     # display details of client
     def Tostring(self):
@@ -136,7 +147,10 @@ def broadcast(conn_client):
 
         try:
             # using 0 for web cam
-            vid = cv2.VideoCapture(0)
+            if source ==1 :
+                vid = cv2.VideoCapture(0)
+            else:
+                vid = cv2.VideoCapture(file_path)
             print(f'Broadcasting video to user :{conn_client.Tostring()}')
             #set a size of video
             Width = 400
@@ -155,12 +169,28 @@ def broadcast(conn_client):
                 # send to client
               
                 server_socket.sendto(message, conn_client.address)
-
+                
+                
+                
                 # check whether client still connect to server if not change exist to false to exit both inner loop
                 # and outter loop
                 exist = conn_client.address in (i.address for i in client_list)
+                
+                if exist:
+                    client_list[client_list.index(conn_client)].increment_time()
+                   # print(client_list[client_list.index(conn_client)].get_time())
+                    
+                    if client_list[client_list.index(conn_client)].get_time() >= 100:
+                        print('\n')
+                        print('\n<---------------------------Client Timeout--------------------------->\n')
+                        print(f'Connection Timeout from {conn_client.Tostring()} ')
+                        print('\n<-------------------------------------------------------------------->')
+                        disconnect_user(client_list[client_list.index(conn_client)].address)
+                
+                
+                
                 # if client disconnect exit the loop
-                if exist == False:
+                if exist == False  :
                     print(f"Client {conn_client.Tostring()} disconnected ")
                     # exit broadcasting loop
                     break
@@ -169,6 +199,9 @@ def broadcast(conn_client):
         except socket.error as err:
             print(f" error :  {err}")
             server_socket.close()
+            break
+        except AttributeError as err:
+            print(f" Video have finished")
             break
 
     print(f'Stop Broadcasting to client {conn_client.Tostring()}')
@@ -182,7 +215,10 @@ def broadcast(conn_client):
 def preview():
     while True:
         Width = 400
-        vid = cv2.VideoCapture(0)
+        if source ==1 :
+            vid = cv2.VideoCapture(0)
+        else:
+            vid = cv2.VideoCapture(file_path)
         fps, st, frames_to_count, cnt = (0, 0, 20, 0)
         while vid.isOpened():
             _, frame = vid.read()
@@ -315,10 +351,13 @@ def handle_receive_connection():
         # if Status is quit then remove client
         if (status == 'QUIT'):
             disconnect_user(client_addr)
-        # if status is RTT then pass this is for calculate RTT time in client
+        # if status is RTT then pass this is for calculate RTT time in client and check whether is client is still connect if connect reset a time
         elif (status == 'RTT'):
-
-            pass
+        
+           for i,client  in enumerate (client_list):
+               if client.name == msg:
+                   client_list[i].reset_time()
+                  
         
         # if Status = LOGIN
         elif(status == 'LOGIN'):
@@ -347,6 +386,8 @@ def handle_receive_connection():
                     server_socket.sendto(b'AUTHORIZE::',client_addr)
                     # create new client object
                     conn_client = Client(msg, client_addr)
+                    
+                    conn_client.reset_time()
                     # add client to client list
                     connected_user(conn_client)
                     # start thread to handle broadcasting video to client
@@ -378,10 +419,43 @@ def handle_receive_connection():
     Start the server
 '''
 def start_server():
+    
+    global source
+    global file_path 
+    con =True
+    while con:
+        
+        try:
+            source = int(input('Enter 1 to use your webcam or 2 to use video file for broadcasting\n'))
+            
+            if source == 1 or source == 2 :
+                con = False
+                if(source == 2 ):
+                    
+                    file_path = str(input('please enter file path or file name\n'))
+                    
+                    if not os.path.isfile(file_path):
+                        con = True
+                        print ("File not exist")
+                        raise Exception("File does not exist please try again")     
+            else :
+                
+                raise Exception("Please try again Enter 1 to use your webcam or 2 to use video file for broadcasting")     
+            
+        except ValueError as err:
+            print('Please try again Enter 1 to use your webcam or 2 to use video file for broadcasting')
+        except Exception as err:
+            print(err)
+        
     create_udp_socket()
     binding_socket()
     handle_receive_connection()
 
 
 start_server()
-
+# msg ='1231231'
+# client_addr='2342423'
+# conn_client = Client(msg, client_addr)
+# conn_client.set_time()
+# conn_client.increment_time()
+# print(conn_client.time)
