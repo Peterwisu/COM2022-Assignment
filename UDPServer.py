@@ -164,14 +164,17 @@ def broadcast(conn_client):
                 # encode image format into streaming data 
                 endcoded, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
                 
-                # encode a image in form of array of number into byte ascii
-                message = base64.b64encode(buffer)
+                # Assigning data in a packet
+                packet = 'VIDEO::'
+                for i in buffer:
+                    packet+=f'{i} '
+                     
+    
+                # encode a image data from an array of number into byte ascii and encode it using base63 encoding again
+                message = base64.b64encode(packet.encode('ascii'))
                 # send to client
               
                 server_socket.sendto(message, conn_client.address)
-                
-                
-                
                 # check whether client still connect to server if not change exist to false to exit both inner loop
                 # and outter loop
                 exist = conn_client.address in (i.address for i in client_list)
@@ -201,7 +204,9 @@ def broadcast(conn_client):
             server_socket.close()
             break
         except AttributeError as err:
-            print(f" Video have finished")
+            print(f" Video have finished {err}")
+            packet = 'FINISH::'
+            server_socket.sendto(base64.b64encode(packet.encode('ascii')),conn_client.address)
             break
 
     print(f'Stop Broadcasting to client {conn_client.Tostring()}')
@@ -335,7 +340,7 @@ def handle_receive_connection():
         # Receive connection from client
         msg, client_addr = server_socket.recvfrom(BUFF_SIZE)
         # unpack packet
-        msg = msg.decode()
+        msg = base64.b64decode(msg,b' /').decode('ascii')
 
         # split a message into multiple string seperate  by :
         msg_split = msg.split('::')
@@ -383,7 +388,7 @@ def handle_receive_connection():
                 if(check and not existed):
                     
                     # send message to client to,let user know login has been authorize
-                    server_socket.sendto(b'AUTHORIZE::',client_addr)
+                    server_socket.sendto(base64.b64encode(b'AUTHORIZE::'),client_addr)
                     # create new client object
                     conn_client = Client(msg, client_addr)
                     
@@ -399,17 +404,17 @@ def handle_receive_connection():
                       
                     print('Unauthorize user try to connect from address:',client_addr)
                     # send message to client to,let user know login has been rejected
-                    server_socket.sendto(b'UNAUTHORIZE::',client_addr)
+                    server_socket.sendto(base64.b64encode(b'UNAUTHORIZE::'),client_addr)
                 
                 elif existed == True:
                     print(f' User  {msg} try to connect from address :{client_addr} but already login from other address')
                     # send message to client to,let user know login has been rejected
-                    server_socket.sendto(b'EXISTED::',client_addr)
+                    server_socket.sendto(base64.b64encode(b'EXISTED::'),client_addr)
 
             else:
                 print('Unauthorize user try to connect from address:',client_addr)
                 # send message to client to,let user know login has been rejected
-                server_socket.sendto(b'FULL::',client_addr)
+                server_socket.sendto(base64.b64encode(b'FULL::'),client_addr)
         else:
             print('Unauthorize machine try to connect from address:',client_addr)
             pass
@@ -453,9 +458,3 @@ def start_server():
 
 
 start_server()
-# msg ='1231231'
-# client_addr='2342423'
-# conn_client = Client(msg, client_addr)
-# conn_client.set_time()
-# conn_client.increment_time()
-# print(conn_client.time)

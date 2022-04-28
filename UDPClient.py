@@ -96,7 +96,8 @@ def receive_broadcast(server):
             # record a time before send data to server
             initial_time = time.time()
             msg = f"RTT::{name}"
-            client_socket.sendto(bytes(msg,'ascii'),(host_ip, port))
+            
+            client_socket.sendto(base64.b64encode(msg.encode('ascii')),(host_ip, port))
             # receive a packet containing data for vdo streaming
             packet, server_add = client_socket.recvfrom(BUFF_SIZE)
             # record a time after data to server
@@ -107,36 +108,45 @@ def receive_broadcast(server):
             
             # append a rtt to a RTT_list
             RTT_list= np.append(RTT_list,delay_time)
+            # unpack packet from datagram and decode it from base64 and ascii
+            data = base64.b64decode(packet,b' /').decode('ascii')
+            
+            # split a message into multiple string seperate  by ::
+            recv_msg = data.split('::')
+            
+            
+            if recv_msg[0] == "VIDEO":
+                # recovery the image data and store in numpy array
+                recv_data  = np.fromstring(recv_msg [1], dtype=np.uint8, sep=' ')
+                # decode streaming data into image
+                frame = cv2.imdecode(recv_data, 1)
+                frame = cv2.putText(frame, 'FPS: ' + str(fps), (10, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+                cv2.imshow("RECEIVING VIDEO from Server (q:quit)", frame)
+                key = cv2.waitKey(1) & 0xFF
+                # if client click q exit the streaming
+                if key == ord('q'):
+                    # send message quit to server to let server know client have disconnect
+                    msg =b'QUIT::'
+                    client_socket.sendto(base64.b64encode(msg),server)
+                    print('Disconnected to server')
+                    # close socket
+                    client_socket.close()
+                    break
+                # calculate frame rate
+                if cnt == frames_to_count:
+                        try:
+                            fps = round(frames_to_count/(time.time()-st))
+                            st=time.time()
+                            cnt=0
+                        except:
+                            pass
+                cnt+=1
 
-
-            # unpack packet from datagram and decode it
-            data = base64.b64decode(packet,b' /')
-            # recovery the image data and store in numpy array
-            npdata = np.fromstring(data, dtype=np.uint8)
-            # decode streaming data into image
-            frame = cv2.imdecode(npdata, 1)
-            frame = cv2.putText(frame, 'FPS: ' + str(fps), (10, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
-            cv2.imshow("RECEIVING VIDEO from Server (q:quit)", frame)
-            key = cv2.waitKey(1) & 0xFF
-            # if client click q exit the streaming
-            if key == ord('q'):
-                # send message quit to server to let server know client have disconnect
-                msg =b'QUIT::'
-                client_socket.sendto(msg,server)
-                print('Disconnected to server')
-                # close socket
-                client_socket.close()
-                break
-            # calculate frame rate
-            if cnt == frames_to_count:
-                    try:
-                        fps = round(frames_to_count/(time.time()-st))
-                        st=time.time()
-                        cnt=0
-                    except:
-                        pass
-            cnt+=1
-    
+            if recv_msg[0]== 'FINISH':
+                raise Exception('Video Broadcasting finish')
+            
+            
+            
     # exception for timeout waiting to receive packet from server
     except socket.timeout as err:
         print(f'Connection {err}to Server while receiving broadcast ')
@@ -145,7 +155,9 @@ def receive_broadcast(server):
     except socket.error as err:
         print(f'Connection {err}to Server while receiving broadcast ')
         client_socket.close()
-    
+    except Exception as err:
+        print(err)
+        client_socket.close()
 
 
 
@@ -189,13 +201,13 @@ def request_connection():
     try:
         message = bytes(message,'ascii')
         # send username to a server        
-        client_socket.sendto(message, (host_ip, port))
+        client_socket.sendto(base64.b64encode(message), (host_ip, port))
         
         print('Logging in and requeting broadcast from server')
         # receive respond from server
         packet, server_add =client_socket.recvfrom(BUFF_SIZE)
         # unpack packet
-        packet = packet.decode()
+        packet = base64.b64decode(packet,b' /').decode('ascii')
         # Check if the message from packet is authorize or unauthorize
         if(packet == 'UNAUTHORIZE::'):
 
@@ -241,9 +253,6 @@ def start():
 
     
 start()
-
-
-
 
 
 
