@@ -182,9 +182,10 @@ def broadcast(conn_client):
                 exist = conn_client.address in (i.address for i in client_list)
                 
                 if exist:
+                    #if client still exist increase a time 
                     client_list[client_list.index(conn_client)].increment_time()
-                   # print(client_list[client_list.index(conn_client)].get_time())
-                    
+                   
+                    # if the time reac the timeouts stop broadcast to client and  remoce client form connceon list
                     if client_list[client_list.index(conn_client)].get_time() >= 100:
                         print('\n')
                         print('\n<---------------------------Client Timeout--------------------------->\n')

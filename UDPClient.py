@@ -67,7 +67,7 @@ def create_udp_socket():
 
 
 '''
-    Calculate RTT time
+    Calculate Round Trip Time (RTT)
 '''
 def get_rtt():
     if len(RTT_list):
@@ -97,7 +97,7 @@ def receive_broadcast(server):
             # record a time before send data to server
             initial_time = time.time()
             msg = f"RTT::{name}"
-            
+            # send a packet to measure a rtt time and reset a timer on server
             client_socket.sendto(base64.b64encode(msg.encode('ascii')),(host_ip, port))
             # receive a packet containing data for vdo streaming
             packet, server_add = client_socket.recvfrom(BUFF_SIZE)
@@ -106,7 +106,7 @@ def receive_broadcast(server):
             # calculate a round trip time 
             delay_time = ending_time - initial_time
             
-            
+            # out the round trip time of a packet
             print(f'Receive {sys.getsizeof(packet)} bytes from {server_add[0]}:{server_add[1]} icmp_sq={len(RTT_list)} time={np.round(delay_time* 1000,2)} ms')
          
             
@@ -121,7 +121,7 @@ def receive_broadcast(server):
             # split a message into multiple string seperate  by ::
             recv_msg = data.split('::')
             
-            
+            # if the flags is VIDEO display it on screen
             if recv_msg[0] == "VIDEO":
                 # recovery the image data and store in numpy array
                 recv_data  = np.fromstring(recv_msg [1], dtype=np.uint8, sep=' ')
@@ -148,7 +148,7 @@ def receive_broadcast(server):
                         except:
                             pass
                 cnt+=1
-
+            # if the flags is FINISH quit close the program
             if recv_msg[0]== 'FINISH':
                 
                 raise Exception('Video Broadcasting finish')
@@ -170,7 +170,9 @@ def receive_broadcast(server):
         client_socket.close()
 
 
-
+'''
+    send request for a user authentication
+'''
 def user_login():
     
     try:
