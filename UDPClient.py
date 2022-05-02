@@ -20,6 +20,7 @@ import time
 import base64
 import threading
 import time
+import sys
 # buff size
 BUFF_SIZE = 65536
 
@@ -106,8 +107,14 @@ def receive_broadcast(server):
             delay_time = ending_time - initial_time
             
             
+            print(f'Receive {sys.getsizeof(packet)} bytes from {server_add[0]}:{server_add[1]} icmp_sq={len(RTT_list)} time={np.round(delay_time* 1000,2)} ms')
+         
+            
             # append a rtt to a RTT_list
             RTT_list= np.append(RTT_list,delay_time)
+            
+            
+            
             # unpack packet from datagram and decode it from base64 and ascii
             data = base64.b64decode(packet,b' /').decode('ascii')
             
@@ -128,7 +135,7 @@ def receive_broadcast(server):
                     # send message quit to server to let server know client have disconnect
                     msg =b'QUIT::'
                     client_socket.sendto(base64.b64encode(msg),server)
-                    print('Disconnected to server')
+                    print('Disconnected from server')
                     # close socket
                     client_socket.close()
                     break
@@ -143,6 +150,7 @@ def receive_broadcast(server):
                 cnt+=1
 
             if recv_msg[0]== 'FINISH':
+                
                 raise Exception('Video Broadcasting finish')
             
             
@@ -157,6 +165,8 @@ def receive_broadcast(server):
         client_socket.close()
     except Exception as err:
         print(err)
+        print("Disconnecting....")
+        print('Closing socket...')
         client_socket.close()
 
 
@@ -208,21 +218,30 @@ def request_connection():
         packet, server_add =client_socket.recvfrom(BUFF_SIZE)
         # unpack packet
         packet = base64.b64decode(packet,b' /').decode('ascii')
-        # Check if the message from packet is authorize or unauthorize
-        if(packet == 'UNAUTHORIZE::'):
+        
+        packet= packet.split('::')
+        
+        
+        if packet[0] == 'MESSAGE':
+        
+            # Check if the message from packet is authorize or unauthorize
+            if(packet[1] == 'UNAUTHORIZE'):
 
-            raise Exception("Your username is not authorize or password is wrong please try again")
-           
-        elif(packet == 'FULL::'):
-            raise Exception("Server is full please try again later")
+                raise Exception("Your username is not authorize or password is wrong please try again")
             
-        elif packet == 'EXISTED::':
-            raise Exception("USER already login from other address")
-        elif(packet == 'AUTHORIZE::'):
-            # if authorize  start receiveing broadcast    
-            print('Login authorize')
-            # call receive broadcast to receive video streaming form server
-            receive_broadcast((host_ip, port))
+            elif(packet[1] == 'FULL'):
+                raise Exception("Server is full please try again later")
+                
+            elif packet[1] == 'EXISTED':
+                raise Exception("USER already login from other address")
+            elif(packet[1] == 'AUTHORIZE'):
+                # if authorize  start receiveing broadcast    
+                print('Login authorize')
+                # call receive broadcast to receive video streaming form server
+                receive_broadcast((host_ip, port))
+        else :
+            
+            print("receving data back in wrong format")
 
     # exception for timeout waiting to receive packet from server       
     except socket.timeout as er:
@@ -248,7 +267,7 @@ def start():
     request_connection()
     # call function get_rtt to ge average ,maximum and minimum rtt time occur while reciving broadcast
     Avg , Max , Min = get_rtt()
-    print(f'RTT average : {Avg} , RTT max : {Max} , RTT min : {Min}')
+    print(f'RTT average : {np.round(Avg* 1000,2)} ms, RTT max : {np.round(Max* 1000,2)} ms, RTT min : {np.round(Min* 1000,2)}ms')
 
 
     

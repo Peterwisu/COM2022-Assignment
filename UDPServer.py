@@ -37,6 +37,8 @@ authorize_client = {
     "wish" : '1234',
     "peter" : '1234',
     'mouaz' : '1234',
+    "fay"   : '1234',
+    "tac" : '1234'
 
 }
 
@@ -204,9 +206,11 @@ def broadcast(conn_client):
             server_socket.close()
             break
         except AttributeError as err:
-            print(f" Video have finished {err}")
+            print(f" Video have finished ")
             packet = 'FINISH::'
+            
             server_socket.sendto(base64.b64encode(packet.encode('ascii')),conn_client.address)
+            disconnect_user(client_list[client_list.index(conn_client)].address)
             break
 
     print(f'Stop Broadcasting to client {conn_client.Tostring()}')
@@ -338,12 +342,12 @@ def handle_receive_connection():
     print('Waiting for client to connect ')
     while True:
         # Receive connection from client
-        msg, client_addr = server_socket.recvfrom(BUFF_SIZE)
+        req, client_addr = server_socket.recvfrom(BUFF_SIZE)
         # unpack packet
-        msg = base64.b64decode(msg,b' /').decode('ascii')
+        req = base64.b64decode(req,b' /').decode('ascii')
 
         # split a message into multiple string seperate  by :
-        msg_split = msg.split('::')
+        msg_split = req.split('::')
 
         # first index of array contain status of request
         status = msg_split[0]
@@ -372,8 +376,8 @@ def handle_receive_connection():
             password = msg_split[2]
 
 
-            # limit number of client  to 6
-            if len(client_list) <=4:
+            # limit number of client  to 4
+            if len(client_list) <=2:
                 # add client connection to server
                 print('\n<---------------------------Received Connection------------------------>')
                 print(f'GOT connection from  IP and Port {client_addr} , with username {msg}')
@@ -388,7 +392,7 @@ def handle_receive_connection():
                 if(check and not existed):
                     
                     # send message to client to,let user know login has been authorize
-                    server_socket.sendto(base64.b64encode(b'AUTHORIZE::'),client_addr)
+                    server_socket.sendto(base64.b64encode(b'MESSAGE::AUTHORIZE'),client_addr)
                     # create new client object
                     conn_client = Client(msg, client_addr)
                     
@@ -404,19 +408,21 @@ def handle_receive_connection():
                       
                     print('Unauthorize user try to connect from address:',client_addr)
                     # send message to client to,let user know login has been rejected
-                    server_socket.sendto(base64.b64encode(b'UNAUTHORIZE::'),client_addr)
+                    server_socket.sendto(base64.b64encode(b'MESSAGE::UNAUTHORIZE'),client_addr)
                 
                 elif existed == True:
                     print(f' User  {msg} try to connect from address :{client_addr} but already login from other address')
                     # send message to client to,let user know login has been rejected
-                    server_socket.sendto(base64.b64encode(b'EXISTED::'),client_addr)
+                    server_socket.sendto(base64.b64encode(b'MESSAGE::EXISTED'),client_addr)
 
             else:
-                print('Unauthorize user try to connect from address:',client_addr)
+                print(f'Server reach the limit of connection with{len(client_list)} ')
+                print('But receive a connection request from :',client_addr )
                 # send message to client to,let user know login has been rejected
-                server_socket.sendto(base64.b64encode(b'FULL::'),client_addr)
+                server_socket.sendto(base64.b64encode(b'MESSAGE::FULL'),client_addr)
         else:
-            print('Unauthorize machine try to connect from address:',client_addr)
+            print('Unrecognize format of packet try to connect from address:',client_addr)
+            print(f'message in packet:{req}')
             pass
 
 
