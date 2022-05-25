@@ -106,8 +106,8 @@ def receive_broadcast(server):
             # calculate a round trip time 
             delay_time = ending_time - initial_time
             
-            # out the round trip time of a packet
-            print(f'Receive {sys.getsizeof(packet)} bytes from {server_add[0]}:{server_add[1]} icmp_sq={len(RTT_list)} time={np.round(delay_time* 1000,2)} ms')
+            # print out the round trip time of a packet
+            print(f'Receive {sys.getsizeof(packet)} bytes from {server_add[0]}:{server_add[1]} icmp_seq={len(RTT_list)} time={np.round(delay_time* 1000,2)} ms')
          
             
             # append a rtt to a RTT_list
@@ -133,8 +133,8 @@ def receive_broadcast(server):
                 # if client click q exit the streaming
                 if key == ord('q'):
                     # send message quit to server to let server know client have disconnect
-                    msg =b'QUIT::'
-                    client_socket.sendto(base64.b64encode(msg),server)
+                    msg =f'QUIT::{name}'
+                    client_socket.sendto(base64.b64encode(msg.encode('ascii')),server)
                     print('Disconnected from server')
                     # close socket
                     client_socket.close()
@@ -262,15 +262,14 @@ def request_connection():
             exit()
 
 
-
-
 def start():
     create_udp_socket()
     request_connection()
     # call function get_rtt to ge average ,maximum and minimum rtt time occur while reciving broadcast
-    Avg , Max , Min = get_rtt()
-    print(f'RTT average : {np.round(Avg* 1000,2)} ms, RTT max : {np.round(Max* 1000,2)} ms, RTT min : {np.round(Min* 1000,2)}ms')
-
+    if len(RTT_list) >0:
+        Avg , Max , Min = get_rtt()
+        print(f'RTT average : {np.round(Avg* 1000,2)} ms, RTT max : {np.round(Max* 1000,2)} ms, RTT min : {np.round(Min* 1000,2)}ms')
+    
 
     
 start()

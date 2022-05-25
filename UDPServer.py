@@ -171,7 +171,7 @@ def broadcast(conn_client):
                 for i in buffer:
                     packet+=f'{i} '
                      
-    
+               
                 # encode a image data from an array of number into byte ascii and encode it using base63 encoding again
                 message = base64.b64encode(packet.encode('ascii'))
                 # send to client
@@ -183,7 +183,8 @@ def broadcast(conn_client):
                 
                 if exist:
                     #if client still exist increase a time 
-                    client_list[client_list.index(conn_client)].increment_time()
+                    
+                   # client_list[client_list.index(conn_client)].increment_time()
                    
                     # if the time reac the timeouts stop broadcast to client and  remoce client form connceon list
                     if client_list[client_list.index(conn_client)].get_time() >= 100:
@@ -378,7 +379,7 @@ def handle_receive_connection():
 
 
             # limit number of client  to 4
-            if len(client_list) <=2:
+            if len(client_list) <1:
                 # add client connection to server
                 print('\n<---------------------------Received Connection------------------------>')
                 print(f'GOT connection from  IP and Port {client_addr} , with username {msg}')
@@ -422,7 +423,7 @@ def handle_receive_connection():
                 # send message to client to,let user know login has been rejected
                 server_socket.sendto(base64.b64encode(b'MESSAGE::FULL'),client_addr)
         else:
-            print('Unrecognize format of packet try to connect from address:',client_addr)
+            print(f'Unrecognize format of packet try to connect from address: {client_addr}')
             print(f'message in packet:{req}')
             pass
 
